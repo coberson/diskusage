@@ -8,6 +8,7 @@ import shutil
 
 help_pass2 = """num  go to listed directory number 'num'
 cnum list files and directories in directory number 'num'(for example: c11)
+c    clean current directory
 +    (default) go to last (and thus biggest) directory
 u    go one step up - can be also '0' or '..'
 l    list files in the current directory
@@ -89,9 +90,10 @@ class TopLevelDir(object):
         for root, dirs, files in os.walk(self.dir_to_check, topdown=False):
             t_size = 0
             for f in files:
-                size = os.path.getsize(os.path.join(root,f))
+                new_f = os.path.join(root,f) #complete path in case of homonyms
+                size = os.path.getsize(new_f)
                 t_size += size
-                self.cache[f] = HumanReadableSize(size)
+                self.cache[new_f] = HumanReadableSize(size)
             t_size += sum ([self.cache[os.path.join(root,d)].val for d in dirs])
             self.cache[root] = HumanReadableSize(t_size)
             if verbose:
@@ -130,13 +132,13 @@ class TopLevelDir(object):
         print '\t\t********************************************'
         print '\t\t* list of files in ',path
         dirs_and_files = (os.path.join(path, d) for d in os.listdir(path))
-        files = [f for f in dirs_and_files if os.path.isfile(f)]
+        files = [f for f in dirs_and_files if os.path.isfile(f) and not    os.path.basename(f).startswith('.')]
         files.sort(key = lambda f: os.path.getsize(f))
         count = 0
         if files:
             for f in files:
-                new_f = os.path.basename(f)
                 count += 1
+                new_f = os.path.basename(f)
                 print "\t\t*F\t{}\t{}\t{}".format(count, new_f, self.cache[new_f])
         else:
             print '\t\t No files in ' + path
@@ -148,7 +150,7 @@ class TopLevelDir(object):
         new_dir = current_dir
         if car == 'q':
             new_dir = None
-        elif car in [str(i+1) for i in range(len(subdirs))]:
+        elif car in {str(i+1) for i in range(len(subdirs))}:
             print '----> Moving to directory', subdirs[int(car)-1]
             new_dir = subdirs[int(car)-1]
         elif car=='.':
@@ -157,17 +159,20 @@ class TopLevelDir(object):
             self.list_files(current_dir)
         elif car == '!':
             self.pass1(self.verb)
-        elif car in ['u','0','..']:
+        elif car in {'u','0','..'}:
             print '----> Moving one step up'
             new_dir = self.move_to_parent(current_dir)
         elif car == '+':
             new_dir = subdirs[len(subdirs)-1]
         elif car == 'v':
             self.verb = not self.verb
-        elif car[0] == 'c' and len(car)>1:
-            num = car[1:]
-            if num in [str(i+1) for i in range(len(subdirs))]:
-                self.list_for_clean(subdirs[int(num)-1])
+        elif car[0] == 'c': 
+            if len(car)>1:
+                num = car[1:]
+                if num in {str(i+1) for i in range(len(subdirs))}:
+                    self.list_for_clean(subdirs[int(num)-1])
+            else:
+                self.list_for_clean(current_dir)
         else:
             print help_pass2
         return new_dir
@@ -194,40 +199,47 @@ class TopLevelDir(object):
         for input nu, delete file or directory number 'nu' """
         nu = -1
         
-        dirs_and_files = [os.path.join(path, d) for d in os.listdir(path)]
+        dirs_and_files = [os.path.join(path, d) for d in os.listdir(path) if not  os.path.basename(d).startswith('.')]
         dirs_and_files.sort(key = lambda d: self.cache[d])
         while nu != 0:
             if nu>0:
                 d = dirs_and_files[nu-1]
-                rep = raw_input("Do you want to delete {}? y/n\n".format(d))
+                rep = 'o'
+                while rep not in ['y','n']:
+                    rep = raw_input("Do you want to delete {}? y/n\n".format(d))
                 if rep == 'y':
                     #dd = os.path.join(path,d)
                     if os.path.isfile(d):
                         os.remove(d)
-                        del self.cache[os.path.basename(d)]
+                        del self.cache[d]
                     else:
                         shutil.rmtree(d)
                         del self.cache[d]
-                dirs_and_files = [os.path.join(path, d) for d in os.listdir(path)]
+                dirs_and_files = [os.path.join(path, d) for d in os.listdir(path)
+                                 if not  os.path.basename(d).startswith('.')]
                 dirs_and_files.sort(key = lambda d: self.cache[d])
                 t_size = sum ([self.cache[d].val for d in dirs_and_files])
-                #print self.cache
                 self.cache[path] = HumanReadableSize(t_size)
             
             print "\t\t-------------Cleaning {} - total size of{}".\
                                 format(path, self.cache[path])
             count = 0
-            for d in dirs_and_files:
-                count += 1
-                if os.path.isfile(d):
-                    new_f = os.path.basename(d)
-                    print "\t\t|F\t{}\t{}\t{}".\
-                        format(count, new_f, self.cache[new_f])
-                else:
-                    print "\t\t|D\t{}\t{}\t{}".\
-                        format(count,os.path.basename(d),self.cache[d]) 
-            rep = raw_input("Enter number to delete file or dir, 0 to quit cleaning\n")
-            nu = int(rep)
+            if not dirs_and_files:
+                print "\t\t|Empty directory!!!!!!!!!!"
+                break
+            else:
+                for d in dirs_and_files:
+                    count += 1
+                    if os.path.isfile(d):
+                        print "\t\t|F\t{}\t{}\t{}".\
+                            format(count,os.path.basename(d), self.cache[d])
+                    else:
+                        print "\t\t|D\t{}\t{}\t{}".\
+                            format(count,os.path.basename(d),self.cache[d])
+                rep = -1
+                while rep not in {str(i) for i in range(count+1)}:
+                    rep = raw_input("Enter number to delete file or dir, 0 to quit cleaning\n")
+                nu = int(rep)
             
                     
 def main():
