@@ -1,10 +1,11 @@
+from __future__ import print_function
+from builtins import input
 import argparse
 import os
 import os.path
 import operator
 import shutil
 
-# test, make Python3 compatible
 
 help_pass2 = """num  go to listed directory number 'num'
 cnum list files and directories in directory number 'num'(for example: c11)
@@ -70,7 +71,7 @@ class Cache(dict):
         descr = "-------- Path {} has a total size of {}\n".format(dir_name, total_size)
         count = 0
         for couple in sorted_list:
-            file_name = os.path.basename(couple[0])
+            file_name = couple[0]
             file_size = couple[1]
             count += 1
             descr += "{}\t{}\t{}\n".format(count,file_size,file_name)
@@ -97,9 +98,9 @@ class TopLevelDir(object):
             t_size += sum ([self.cache[os.path.join(root,d)].val for d in dirs])
             self.cache[root] = HumanReadableSize(t_size)
             if verbose:
-                print '.................... Computing size of {}!'.format(root)
+                print ('.................... Computing size of {}!'.format(root))
             
-        #print self.cache #debugging
+        #print (self.cache) #debugging
     
     def pass2(self):
         """entry point for pass2:
@@ -112,15 +113,15 @@ class TopLevelDir(object):
             if subdirs == []: 
                 current_dir = self.move_to_parent(current_dir)
                 print\
-                  '\n=> Choose options for parent directory {}!'.format(current_dir)
+                  ('\n=> Choose options for parent directory {}!'.format(current_dir))
                 subdirs = self.print_current_dir(current_dir)
-            car = raw_input("Enter number (h for help)\n")
+            car = input("Enter number (h for help)\n")
             current_dir = self.act_after_input(current_dir, subdirs, car)
             
     def move_to_parent(self, path):
         """move to path directory"""
         if path == self.dir_to_check:
-            print '      Parent directory out of scope!'
+            print ('      Parent directory out of scope!')
             return path
         else:
             dir_name = os.path.dirname(path)
@@ -129,8 +130,8 @@ class TopLevelDir(object):
     def list_files(self, path):
         """display list of plain files in a given dir
         sorted largest last"""
-        print '\t\t********************************************'
-        print '\t\t* list of files in ',path
+        print ('\t\t********************************************')
+        print ('\t\t* list of files in ',path)
         dirs_and_files = (os.path.join(path, d) for d in os.listdir(path))
         files = [f for f in dirs_and_files if os.path.isfile(f) and not    os.path.basename(f).startswith('.')]
         files.sort(key = lambda f: os.path.getsize(f))
@@ -139,10 +140,10 @@ class TopLevelDir(object):
             for f in files:
                 count += 1
                 new_f = os.path.basename(f)
-                print "\t\t*F\t{}\t{}\t{}".format(count, new_f, self.cache[new_f])
+                print ("\t\t*F\t{}\t{}\t{}".format(count, new_f, self.cache[new_f]))
         else:
-            print '\t\t No files in ' + path
-        print '\t\t********************************************'
+            print ('\t\t No files in ' + path)
+        print ('\t\t********************************************')
                 
     def act_after_input(self, current_dir, subdirs, car):
         """according to input character,
@@ -151,7 +152,7 @@ class TopLevelDir(object):
         if car == 'q':
             new_dir = None
         elif car in {str(i+1) for i in range(len(subdirs))}:
-            print '----> Moving to directory', subdirs[int(car)-1]
+            print ('----> Moving to directory', subdirs[int(car)-1])
             new_dir = subdirs[int(car)-1]
         elif car=='.':
             pass
@@ -160,7 +161,7 @@ class TopLevelDir(object):
         elif car == '!':
             self.pass1(self.verb)
         elif car in {'u','0','..'}:
-            print '----> Moving one step up'
+            print ('----> Moving one step up')
             new_dir = self.move_to_parent(current_dir)
         elif car == '+':
             new_dir = subdirs[len(subdirs)-1]
@@ -174,7 +175,7 @@ class TopLevelDir(object):
             else:
                 self.list_for_clean(current_dir)
         else:
-            print help_pass2
+            print (help_pass2)
         return new_dir
 
     def print_current_dir(self, path):
@@ -182,15 +183,15 @@ class TopLevelDir(object):
         dirs_and_files = (os.path.join(path, d) for d in os.listdir(path))
         dirs = [d for d in dirs_and_files  if os.path.isdir(d)]
         dirs.sort(key = lambda d: self.cache[d])
-        print "-------- Path {} has a total size of{}".\
-                                format(path, self.cache[path])
+        print ("-------- Path {} has a total size of{}".\
+                                format(path, self.cache[path]))
         count = 0
         if dirs:
             for d in dirs:
                 count += 1
-                print "{}\t{}\t{}".format(count,os.path.basename(d),self.cache[d])
+                print ("{}\t{}\t{}".format(count,os.path.basename(d),self.cache[d]))
         else:
-            print '\tNo subdirectories in ' + path
+            print ('\tNo subdirectories in ' + path)
             self.list_files(path)
         return dirs
 
@@ -206,7 +207,7 @@ class TopLevelDir(object):
                 d = dirs_and_files[nu-1]
                 rep = 'o'
                 while rep not in ['y','n']:
-                    rep = raw_input("Do you want to delete {}? y/n\n".format(d))
+                    rep = input("Do you want to delete {}? y/n\n".format(d))
                 if rep == 'y':
                     #dd = os.path.join(path,d)
                     if os.path.isfile(d):
@@ -221,24 +222,24 @@ class TopLevelDir(object):
                 t_size = sum ([self.cache[d].val for d in dirs_and_files])
                 self.cache[path] = HumanReadableSize(t_size)
             
-            print "\t\t-------------Cleaning {} - total size of{}".\
-                                format(path, self.cache[path])
+            print ("\t\t-------------Cleaning {} - total size of{}".\
+                                format(path, self.cache[path]))
             count = 0
             if not dirs_and_files:
-                print "\t\t|Empty directory!!!!!!!!!!"
+                print ("\t\t|Empty directory!!!!!!!!!!")
                 break
             else:
                 for d in dirs_and_files:
                     count += 1
                     if os.path.isfile(d):
-                        print "\t\t|F\t{}\t{}\t{}".\
-                            format(count,os.path.basename(d), self.cache[d])
+                        print ("\t\t|F\t{}\t{}\t{}".\
+                            format(count,os.path.basename(d), self.cache[d]))
                     else:
-                        print "\t\t|D\t{}\t{}\t{}".\
-                            format(count,os.path.basename(d),self.cache[d])
+                        print ("\t\t|D\t{}\t{}\t{}".\
+                            format(count,os.path.basename(d),self.cache[d]))
                 rep = -1
                 while rep not in {str(i) for i in range(count+1)}:
-                    rep = raw_input("Enter number to delete file or dir, 0 to quit cleaning\n")
+                    rep = input("Enter number to delete file or dir, 0 to quit cleaning\n")
                 nu = int(rep)
             
                     
